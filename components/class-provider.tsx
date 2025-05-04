@@ -1,26 +1,27 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
-import { database } from "@/lib/firebase"
-import { ref, onValue, set, remove, push, update } from "firebase/database"
-import { toast } from "react-toastify"
-import type { Class, ClassFormData } from "@/lib/types"
+import type React from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { database } from "@/lib/firebase";
+import { ref, onValue, set, remove, push, update } from "firebase/database";
+import { toast } from "react-toastify";
+import type { Class, ClassFormData, Participant } from "@/lib/types";
 
 /**
  * Tipe data untuk context Class
  */
 interface ClassesContextType {
-  classes: Class[]
-  loading: boolean
-  addClass: (classData: ClassFormData) => Promise<void>
-  updateClass: (id: string, classData: ClassFormData) => Promise<void>
-  deleteClass: (id: string) => Promise<void>
-  getClassById: (id: string) => Class | undefined
+  classes: Class[];
+  loading: boolean;
+  addClass: (classData: ClassFormData) => Promise<void>;
+  updateClass: (id: string, classData: ClassFormData) => Promise<void>;
+  deleteClass: (id: string) => Promise<void>;
+  getClassById: (id: string) => Class | undefined;
+  getParticipantsByClassId: (id: string) => Promise<Participant[]>;
 }
 
 // Buat context untuk Class
-const ClassesContext = createContext<ClassesContextType | undefined>(undefined)
+const ClassesContext = createContext<ClassesContextType | undefined>(undefined);
 
 /**
  * Provider untuk Classes
@@ -28,57 +29,57 @@ const ClassesContext = createContext<ClassesContextType | undefined>(undefined)
  * Menyediakan akses ke data dan operasi kelas
  */
 export function ClassesProvider({ children }: { children: React.ReactNode }) {
-  const [classes, setClasses] = useState<Class[]>([])
-  const [loading, setLoading] = useState(true)
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Ambil data kelas dari Firebase
   useEffect(() => {
     if (!database) {
-      setLoading(false)
-      toast.error("Firebase database tidak terinisialisasi")
-      return () => {}
+      setLoading(false);
+      toast.error("Firebase database tidak terinisialisasi");
+      return () => {};
     }
 
-    const classesRef = ref(database, "classes")
+    const classesRef = ref(database, "classes");
 
     const unsubscribe = onValue(
       classesRef,
       (snapshot) => {
-        const data = snapshot.val()
+        const data = snapshot.val();
         if (data) {
           const classesArray = Object.entries(data).map(([id, classData]) => ({
             id,
             ...(classData as Omit<Class, "id">),
-          }))
-          setClasses(classesArray)
+          }));
+          setClasses(classesArray);
         } else {
-          setClasses([])
+          setClasses([]);
         }
-        setLoading(false)
+        setLoading(false);
       },
       (error) => {
-        console.error("Error fetching classes data:", error)
-        toast.error("Gagal memuat data kelas")
-        setLoading(false)
-      },
-    )
+        console.error("Error fetching classes data:", error);
+        toast.error("Gagal memuat data kelas");
+        setLoading(false);
+      }
+    );
 
     return () => {
-      unsubscribe()
-    }
-  }, [])
+      unsubscribe();
+    };
+  }, []);
 
   /**
    * Menambahkan kelas baru
    */
   const addClass = async (classData: ClassFormData) => {
     if (!database) {
-      toast.error("Firebase database tidak terinisialisasi")
-      throw new Error("Firebase database tidak terinisialisasi")
+      toast.error("Firebase database tidak terinisialisasi");
+      throw new Error("Firebase database tidak terinisialisasi");
     }
 
     try {
-      const timestamp = Date.now()
+      const timestamp = Date.now();
       const newClass: Omit<Class, "id"> = {
         ...classData,
         startDate: classData.startDate,
@@ -88,67 +89,113 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
         image: classData.image,
         color: classData.color,
         icon: classData.icon,
-      }
+      };
 
-      const newClassRef = push(ref(database, "classes"))
-      await set(newClassRef, newClass)
-      toast.success("Kelas berhasil ditambahkan")
+      const newClassRef = push(ref(database, "classes"));
+      await set(newClassRef, newClass);
+      toast.success("Kelas berhasil ditambahkan");
     } catch (error) {
-      console.error("Error adding class:", error)
-      toast.error("Gagal menambahkan kelas")
-      throw error
+      console.error("Error adding class:", error);
+      toast.error("Gagal menambahkan kelas");
+      throw error;
     }
-  }
+  };
 
   /**
    * Memperbarui kelas yang sudah ada
    */
   const updateClass = async (id: string, classData: ClassFormData) => {
     if (!database) {
-      toast.error("Firebase database tidak terinisialisasi")
-      throw new Error("Firebase database tidak terinisialisasi")
+      toast.error("Firebase database tidak terinisialisasi");
+      throw new Error("Firebase database tidak terinisialisasi");
     }
 
     try {
-      const classRef = ref(database, `classes/${id}`)
+      const classRef = ref(database, `classes/${id}`);
       await update(classRef, {
         ...classData,
         updatedAt: Date.now(),
-      })
-      toast.success("Kelas berhasil diperbarui")
+      });
+      toast.success("Kelas berhasil diperbarui");
     } catch (error) {
-      console.error("Error updating class:", error)
-      toast.error("Gagal memperbarui kelas")
-      throw error
+      console.error("Error updating class:", error);
+      toast.error("Gagal memperbarui kelas");
+      throw error;
     }
-  }
+  };
 
   /**
    * Menghapus kelas
    */
   const deleteClass = async (id: string) => {
     if (!database) {
-      toast.error("Firebase database tidak terinisialisasi")
-      throw new Error("Firebase database tidak terinisialisasi")
+      toast.error("Firebase database tidak terinisialisasi");
+      throw new Error("Firebase database tidak terinisialisasi");
     }
 
     try {
-      const classRef = ref(database, `classes/${id}`)
-      await remove(classRef)
-      toast.success("Kelas berhasil dihapus")
+      const classRef = ref(database, `classes/${id}`);
+      await remove(classRef);
+      toast.success("Kelas berhasil dihapus");
     } catch (error) {
-      console.error("Error deleting class:", error)
-      toast.error("Gagal menghapus kelas")
-      throw error
+      console.error("Error deleting class:", error);
+      toast.error("Gagal menghapus kelas");
+      throw error;
     }
-  }
+  };
 
   /**
    * Mendapatkan kelas berdasarkan ID
    */
   const getClassById = (id: string) => {
-    return classes.find((classItem) => classItem.id === id)
-  }
+    return classes.find((classItem) => classItem.id === id);
+  };
+
+  const getParticipantsByClassId = async (
+    id: string
+  ): Promise<Participant[]> => {
+    if (!database) {
+      toast.error("Firebase database tidak terinisialisasi");
+      throw new Error("Firebase database tidak terinisialisasi");
+    }
+
+    try {
+      const participantsRef = ref(database, "participants");
+
+      return new Promise((resolve, reject) => {
+        onValue(
+          participantsRef,
+          (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              const participantsArray = Object.entries(data).map(
+                ([id, participantData]) => ({
+                  id,
+                  ...(participantData as Omit<Participant, "id">),
+                })
+              );
+              // Filter peserta berdasarkan classId
+              const filteredParticipants = participantsArray.filter(
+                (participant) => participant.classId === id
+              );
+              resolve(filteredParticipants);
+            } else {
+              resolve([]);
+            }
+          },
+          (error) => {
+            console.error("Error fetching participants data:", error);
+            toast.error("Gagal memuat data peserta");
+            reject(error);
+          }
+        );
+      });
+    } catch (error) {
+      console.error("Error getting participants by class ID:", error);
+      toast.error("Gagal mengambil data peserta");
+      throw error;
+    }
+  };
 
   return (
     <ClassesContext.Provider
@@ -159,20 +206,21 @@ export function ClassesProvider({ children }: { children: React.ReactNode }) {
         updateClass,
         deleteClass,
         getClassById,
+        getParticipantsByClassId,
       }}
     >
       {children}
     </ClassesContext.Provider>
-  )
+  );
 }
 
 /**
  * Hook untuk menggunakan Classes context
  */
 export function useClasses() {
-  const context = useContext(ClassesContext)
+  const context = useContext(ClassesContext);
   if (context === undefined) {
-    throw new Error("useClasses harus digunakan dalam ClassesProvider")
+    throw new Error("useClasses harus digunakan dalam ClassesProvider");
   }
-  return context
+  return context;
 }
