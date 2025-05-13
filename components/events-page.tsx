@@ -1,16 +1,23 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useEvents } from "@/components/events-provider"
-import { useTrainers } from "@/components/trainers-provider"
-import { usePartners } from "@/components/partners-provider"
-import { useEventCategories } from "@/components/event-categories-provider"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useState } from "react";
+import { useEvents } from "@/components/events-provider";
+import { useTrainers } from "@/components/trainers-provider";
+import { usePartners } from "@/components/partners-provider";
+import { useEventCategories } from "@/components/event-categories-provider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +25,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -26,26 +33,41 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Search, MoreHorizontal, Edit, Trash2, Plus, Filter } from "lucide-react"
-import { formatCurrency } from "@/lib/utils"
-import type { Event, EventFormData } from "@/lib/types"
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Search,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Plus,
+  Filter,
+  ArrowRightCircle,
+} from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import type { Event, EventFormData } from "@/lib/types";
+import Link from "next/link";
 
 export function EventsPage() {
-  const { events, loading, addEvent, updateEvent, deleteEvent } = useEvents()
-  const { trainers } = useTrainers()
-  const { partners } = usePartners()
-  const { eventCategories } = useEventCategories()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [categoryFilter, setcategoryFilter] = useState<string>("all")
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
+  const { events, loading, addEvent, updateEvent, deleteEvent } = useEvents();
+  const { trainers } = useTrainers();
+  const { partners } = usePartners();
+  const { eventCategories } = useEventCategories();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setcategoryFilter] = useState<string>("all");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Filter events based on search query and filters
   const filteredEvents = events.filter((event) => {
@@ -56,41 +78,45 @@ export function EventsPage() {
       !event.description.toLowerCase().includes(searchQuery.toLowerCase()) &&
       !event.location.toLowerCase().includes(searchQuery.toLowerCase())
     ) {
-      return false
+      return false;
     }
 
     // Apply status filter
     if (statusFilter !== "all" && event.status !== statusFilter) {
-      return false
+      return false;
     }
 
     // Apply category filter
     if (categoryFilter !== "all" && event.categoryId !== categoryFilter) {
-      return false
+      return false;
     }
 
-    return true
-  })
+    return true;
+  });
 
   const handleEdit = (event: Event) => {
-    setEditingEvent(event)
-  }
+    setEditingEvent(event);
+  };
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
-      await deleteEvent(id)
+      await deleteEvent(id);
     }
-  }
+  };
 
   const statusColors: Record<string, string> = {
     upcoming: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-    ongoing: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-    completed: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+    ongoing:
+      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+    completed:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
     cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-  }
+  };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full">Loading...</div>
+    return (
+      <div className="flex items-center justify-center h-full">Loading...</div>
+    );
   }
 
   return (
@@ -116,7 +142,11 @@ export function EventsPage() {
           </div>
 
           <div className="md:hidden">
-            <Button variant="outline" className="w-full justify-between" onClick={() => setShowFilters(!showFilters)}>
+            <Button
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => setShowFilters(!showFilters)}
+            >
               <span className="flex items-center">
                 <Filter className="mr-2 h-4 w-4" />
                 Filters
@@ -124,7 +154,9 @@ export function EventsPage() {
             </Button>
           </div>
 
-          <div className={`space-y-4 ${showFilters ? "block" : "hidden md:block"}`}>
+          <div
+            className={`space-y-4 ${showFilters ? "block" : "hidden md:block"}`}
+          >
             <div className="space-y-2">
               <Label className="text-sm font-medium">Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -171,13 +203,17 @@ export function EventsPage() {
                     <TableHead>Date</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Peserta</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredEvents.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell
+                        colSpan={6}
+                        className="text-center py-8 text-muted-foreground"
+                      >
                         No events found
                       </TableCell>
                     </TableRow>
@@ -187,23 +223,44 @@ export function EventsPage() {
                         <TableCell>
                           <div>
                             <div className="font-medium">{event.title}</div>
-                            <div className="text-xs text-muted-foreground">{event.location}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {event.location}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>{event.categoryName}</TableCell>
                         <TableCell>
                           <div>
-                            <div className="text-sm">{new Date(event.startDate).toLocaleDateString()}</div>
+                            <div className="text-sm">
+                              {new Date(event.startDate).toLocaleDateString()}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               to {new Date(event.endDate).toLocaleDateString()}
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">{formatCurrency(event.price)}</TableCell>
+                        <TableCell className="font-medium">
+                          {formatCurrency(event.price)}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={statusColors[event.status] || ""}>
-                            {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                          <Badge
+                            variant="outline"
+                            className={statusColors[event.status] || ""}
+                          >
+                            {event.status.charAt(0).toUpperCase() +
+                              event.status.slice(1)}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/events/participants/${event.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-blue-600 hover:underline"
+                          >
+                            <ArrowRightCircle size={16} />
+                            Peserta
+                          </Link>
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
@@ -216,7 +273,9 @@ export function EventsPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleEdit(event)}>
+                              <DropdownMenuItem
+                                onClick={() => handleEdit(event)}
+                              >
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit
                               </DropdownMenuItem>
@@ -254,7 +313,7 @@ export function EventsPage() {
         <EventDialog
           open={!!editingEvent}
           onOpenChange={(open) => {
-            if (!open) setEditingEvent(null)
+            if (!open) setEditingEvent(null);
           }}
           mode="edit"
           event={editingEvent}
@@ -265,18 +324,18 @@ export function EventsPage() {
         />
       )}
     </div>
-  )
+  );
 }
 
 interface EventDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  mode: "add" | "edit"
-  event?: Event
-  onSubmit: (data: EventFormData) => Promise<void>
-  trainers: any[]
-  partners: any[]
-  eventCategories: any[]
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mode: "add" | "edit";
+  event?: Event;
+  onSubmit: (data: EventFormData) => Promise<void>;
+  trainers: any[];
+  partners: any[];
+  eventCategories: any[];
 }
 
 function EventDialog({
@@ -289,7 +348,7 @@ function EventDialog({
   partners,
   eventCategories,
 }: EventDialogProps) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<EventFormData>({
     title: event?.title || "",
     description: event?.description || "",
@@ -304,46 +363,55 @@ function EventDialog({
     enrolled: event?.enrolled || 0,
     status: event?.status || "upcoming",
     image: event?.image || "",
-  })
+  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "price" || name === "capacity" || name === "enrolled" ? Number(value) : value,
-    }))
-  }
+      [name]:
+        name === "price" || name === "capacity" || name === "enrolled"
+          ? Number(value)
+          : value,
+    }));
+  };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleDateChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: new Date(value).getTime() }))
-  }
+    setFormData((prev) => ({ ...prev, [name]: new Date(value).getTime() }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      await onSubmit(formData)
-      onOpenChange(false)
+      await onSubmit(formData);
+      onOpenChange(false);
     } catch (error) {
-      console.error("Error saving event:", error)
+      console.error("Error saving event:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] p-4 overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{mode === "add" ? "Add Event" : "Edit Event"}</DialogTitle>
+            <DialogTitle>
+              {mode === "add" ? "Add Event" : "Edit Event"}
+            </DialogTitle>
             <DialogDescription>
-              {mode === "add" ? "Add a new event to your calendar" : "Make changes to the event details"}
+              {mode === "add"
+                ? "Add a new event to your calendar"
+                : "Make changes to the event details"}
             </DialogDescription>
           </DialogHeader>
 
@@ -351,11 +419,22 @@ function EventDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Event Title</Label>
-                <Input id="title" name="title" value={formData.title} onChange={handleChange} required />
+                <Input
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="categoryId">Category</Label>
-                <Select value={formData.categoryId} onValueChange={(value) => handleSelectChange("categoryId", value)}>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) =>
+                    handleSelectChange("categoryId", value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -385,7 +464,12 @@ function EventDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="trainerId">Trainer</Label>
-                <Select value={formData.trainerId} onValueChange={(value) => handleSelectChange("trainerId", value)}>
+                <Select
+                  value={formData.trainerId}
+                  onValueChange={(value) =>
+                    handleSelectChange("trainerId", value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select trainer" />
                   </SelectTrigger>
@@ -402,7 +486,9 @@ function EventDialog({
                 <Label htmlFor="partnerId">Partner (Optional)</Label>
                 <Select
                   value={formData.partnerId || ""}
-                  onValueChange={(value) => handleSelectChange("partnerId", value)}
+                  onValueChange={(value) =>
+                    handleSelectChange("partnerId", value)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select partner" />
@@ -421,7 +507,13 @@ function EventDialog({
 
             <div className="space-y-2">
               <Label htmlFor="location">Location</Label>
-              <Input id="location" name="location" value={formData.location} onChange={handleChange} required />
+              <Input
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                required
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -430,8 +522,12 @@ function EventDialog({
                 <Input
                   id="startDate"
                   type="date"
-                  value={new Date(formData.startDate).toISOString().split("T")[0]}
-                  onChange={(e) => handleDateChange("startDate", e.target.value)}
+                  value={
+                    new Date(formData.startDate).toISOString().split("T")[0]
+                  }
+                  onChange={(e) =>
+                    handleDateChange("startDate", e.target.value)
+                  }
                   required
                 />
               </div>
@@ -490,7 +586,12 @@ function EventDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => handleSelectChange("status", value as any)}>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) =>
+                    handleSelectChange("status", value as any)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -516,16 +617,24 @@ function EventDialog({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : mode === "add" ? "Add Event" : "Save Changes"}
+              {loading
+                ? "Saving..."
+                : mode === "add"
+                ? "Add Event"
+                : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

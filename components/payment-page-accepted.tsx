@@ -22,23 +22,28 @@ import { usePayments } from "@/components/payment-provider"
 import Link from "next/link"
 import { PaymentFile, PaymentDetail, PaymentFileFormData } from "@/lib/types"
 
-export function PaymentsPage() {
-  const { payments, loading, addPayment, updatePayment, deletePayment, getPaymentDetailById } = usePayments()
+export function PaymentsPageAccepted() {
+  const { paymentsAccepted, loading, addPayment, updatePayment, deletePayment, getPaymentDetailById } = usePayments()
   const [searchQuery, setSearchQuery] = useState("")
   const [showDialog, setShowDialog] = useState(false)
   const [editingPayment, setEditingPayment] = useState<PaymentFile | null>(null)
   const [participants, setParticipants] = useState<Record<string, PaymentDetail>>({})
 
-  const filteredPayments = payments.filter((payment) =>
+//   console.log(paymentsAccepted)
+  const filteredPayments = paymentsAccepted.filter((payment) =>
     payment.participantId.toLowerCase().includes(searchQuery.toLowerCase()) ||
     payment.filePath.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+//   console.log("Filtered payments:", filteredPayments)
 
   useEffect(() => {
     const fetchParticipants = async () => {
       const participantsData: Record<string, PaymentDetail> = {}
 
-      for (const payment of payments) {
+
+
+      for (const payment of paymentsAccepted) {
         const data = await getPaymentDetailById(payment.id)
         console.log(data)
         if (data !== null && data !== undefined) {
@@ -49,10 +54,10 @@ export function PaymentsPage() {
       setParticipants(participantsData)
     }
 
-    if (payments.length > 0) {
+    if (paymentsAccepted.length > 0) {
       fetchParticipants()
     }
-  }, [payments, getPaymentDetailById])
+  }, [paymentsAccepted, getPaymentDetailById])
 
   const handleEdit = (payment: PaymentFile) => {
     setEditingPayment(payment)

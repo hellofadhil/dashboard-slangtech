@@ -212,8 +212,10 @@ export interface Participant {
   currentResidence: string
   reason: string
   status: "pending" | "accepted" | "rejected" // status peserta (pending menunggu verifikasi)
+  type: "event" | "class" // tipe peserta (event atau kelas)
   lastEducation: string
-  classId: string // relasi ke Class
+  classId?: string // relasi ke Class (opsional)
+  eventId?: string // relasi ke Event (opsional)
   createdAt: number
   updatedAt: number
 }

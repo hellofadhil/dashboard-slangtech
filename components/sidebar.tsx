@@ -102,6 +102,21 @@ export function Sidebar() {
     },
   ]
 
+  const PaymentRoutes = [
+    {
+      label: "Pembayaran",
+      icon: BanknoteIcon,
+      href: "/payment",
+      active: pathname === "/payment",
+    },
+    {
+      label: "Pembayaran Diterima",
+      icon: BanknoteIcon,
+      href: "/payment/verified",
+      active: pathname === "/payment/verified",
+    },
+  ]
+
   // Definisi rute layanan pelatihan
   const trainingServicesRoutes = [
     {

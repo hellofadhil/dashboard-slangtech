@@ -1,154 +1,214 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
-import { database } from "@/lib/firebase"
-import { ref, onValue, push, set, remove, update } from "firebase/database"
-import type { PaymentFile, PaymentFileFormData, PaymentDetail } from "@/lib/types"
-import { toast } from "react-toastify"
+import type React from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { database } from "@/lib/firebase";
+import { ref, onValue, push, set, remove, update } from "firebase/database";
+import type {
+  PaymentFile,
+  PaymentFileFormData,
+  PaymentDetail,
+} from "@/lib/types";
+import { toast } from "react-toastify";
 
 interface PaymentsContextType {
-  payments: PaymentFile[]
-  loading: boolean
-  addPayment: (data: PaymentFileFormData) => Promise<void>
-  updatePayment: (id: string, data: PaymentFileFormData) => Promise<void>
-  deletePayment: (id: string) => Promise<void>
-  getPaymentById: (id: string) => PaymentFile | undefined
-  getPaymentDetailById: (id: string) => Promise<PaymentDetail | undefined>
+  payments: PaymentFile[];
+  paymentsAccepted: PaymentFile[];
+  loading: boolean;
+  addPayment: (data: PaymentFileFormData) => Promise<void>;
+  updatePayment: (id: string, data: PaymentFileFormData) => Promise<void>;
+  deletePayment: (id: string) => Promise<void>;
+  getPaymentById: (id: string) => PaymentFile | undefined;
+  getPaymentDetailById: (
+    id: string
+  ) => Promise<PaymentDetail | undefined | null>;
 }
 
-const PaymentsContext = createContext<PaymentsContextType | undefined>(undefined)
+const PaymentsContext = createContext<PaymentsContextType | undefined>(
+  undefined
+);
 
 export function PaymentsProvider({ children }: { children: React.ReactNode }) {
-  const [payments, setPayments] = useState<PaymentFile[]>([])
-  const [loading, setLoading] = useState(true)
+  const [payments, setPayments] = useState<PaymentFile[]>([]);
+  const [paymentsAccepted, setPaymentsAccepted] = useState<PaymentFile[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!database) {
-      toast.error("Firebase database tidak terinisialisasi")
-      setLoading(false)
-      return
+      toast.error("Firebase database tidak terinisialisasi");
+      setLoading(false);
+      return;
     }
 
-    const paymentsRef = ref(database, "payment_files")
+    const paymentsRef = ref(database, "payment_files");
 
     const unsubscribe = onValue(
       paymentsRef,
       (snapshot) => {
-        const data = snapshot.val()
+        const data = snapshot.val();
         if (data) {
-          const paymentsArray = Object.entries(data).map(([id, payment]) => ({
-            id,
-            ...(payment as Omit<PaymentFile, "id">),
-          }))
-          setPayments(paymentsArray)
+          const paymentsArray = Object.entries(data)
+            .map(([id, payment]) => ({
+              id,
+              ...(payment as Omit<PaymentFile, "id">),
+            }))
+            .filter((payment) => payment.verificationStatus !== "verified");
+          setPayments(paymentsArray);
         } else {
-          setPayments([])
+          setPayments([]);
         }
-        setLoading(false)
+        setLoading(false);
       },
       (error) => {
-        console.error("Gagal mengambil data pembayaran:", error)
-        toast.error("Gagal memuat data pembayaran")
-        setLoading(false)
-      },
-    )
+        console.error("Gagal mengambil data pembayaran:", error);
+        toast.error("Gagal memuat data pembayaran");
+        setLoading(false);
+      }
+    );
 
     return () => {
-      unsubscribe()
+      unsubscribe();
+    };
+  }, []);
+
+   useEffect(() => {
+    if (!database) {
+      toast.error("Firebase database tidak terinisialisasi");
+      setLoading(false);
+      return;
     }
-  }, [])
+
+    const paymentsRef = ref(database, "payment_files");
+
+    const unsubscribe = onValue(
+      paymentsRef,
+      (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const paymentsArray = Object.entries(data)
+            .map(([id, payment]) => ({
+              id,
+              ...(payment as Omit<PaymentFile, "id">),
+            }))
+            .filter((payment) => payment.verificationStatus === "verified");  
+          setPaymentsAccepted(paymentsArray);
+        } else {
+          setPaymentsAccepted([]);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Gagal mengambil data pembayaran:", error);
+        toast.error("Gagal memuat data pembayaran");
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const addPayment = async (data: PaymentFileFormData) => {
     if (!database) {
-      toast.error("Firebase database tidak terinisialisasi")
-      throw new Error("Firebase database tidak terinisialisasi")
+      toast.error("Firebase database tidak terinisialisasi");
+      throw new Error("Firebase database tidak terinisialisasi");
     }
 
     try {
-      const newRef = push(ref(database, "payment_files"))
-      await set(newRef, data)
-      toast.success("Pembayaran berhasil ditambahkan")
+      const newRef = push(ref(database, "payment_files"));
+      await set(newRef, data);
+      toast.success("Pembayaran berhasil ditambahkan");
     } catch (error) {
-      console.error("Gagal menambahkan pembayaran:", error)
-      toast.error("Gagal menambahkan pembayaran")
-      throw error
+      console.error("Gagal menambahkan pembayaran:", error);
+      toast.error("Gagal menambahkan pembayaran");
+      throw error;
     }
-  }
+  };
 
   const updatePayment = async (id: string, data: PaymentFileFormData) => {
     if (!database) {
-      toast.error("Firebase database tidak terinisialisasi")
-      throw new Error("Firebase database tidak terinisialisasi")
+      toast.error("Firebase database tidak terinisialisasi");
+      throw new Error("Firebase database tidak terinisialisasi");
     }
 
     try {
       const updates: Record<string, any> = {
         [`payment_files/${id}`]: data,
-      }
+      };
 
       if (data.verificationStatus === "verified") {
-        updates[`participants/${data.participantId}/status`] = "accepted"
+        updates[`participants/${data.participantId}/status`] = "accepted";
       }
 
-      await update(ref(database), updates)
-      toast.success("Pembayaran berhasil diperbarui dan status peserta diupdate")
+      await update(ref(database), updates);
+      toast.success(
+        "Pembayaran berhasil diperbarui dan status peserta diupdate"
+      );
     } catch (error) {
-      console.error("Gagal memperbarui pembayaran:", error)
-      toast.error("Gagal memperbarui pembayaran")
-      throw error
+      console.error("Gagal memperbarui pembayaran:", error);
+      toast.error("Gagal memperbarui pembayaran");
+      throw error;
     }
-  }
+  };
 
   const deletePayment = async (id: string) => {
     if (!database) {
-      toast.error("Firebase database tidak terinisialisasi")
-      throw new Error("Firebase database tidak terinisialisasi")
+      toast.error("Firebase database tidak terinisialisasi");
+      throw new Error("Firebase database tidak terinisialisasi");
     }
 
     try {
-      const paymentRef = ref(database, `payment_files/${id}`)
-      
-      await remove(paymentRef)
-      toast.success("Pembayaran berhasil dihapus")
+      const paymentRef = ref(database, `payment_files/${id}`);
+
+      await remove(paymentRef);
+      toast.success("Pembayaran berhasil dihapus");
     } catch (error) {
-      console.error("Gagal menghapus pembayaran:", error)
-      toast.error("Gagal menghapus pembayaran")
-      throw error
+      console.error("Gagal menghapus pembayaran:", error);
+      toast.error("Gagal menghapus pembayaran");
+      throw error;
     }
-  }
+  };
 
   const getPaymentById = (id: string) => {
-    return payments.find((p) => p.id === id)
-  }
+    return payments.find((p) => p.id === id);
+  };
 
-  const getPaymentDetailById = async (id: string): Promise<PaymentDetail | undefined> => {
-    const payment = payments.find((p) => p.id === id)
-    if (!payment || !database) return undefined
+  const getPaymentDetailById = async (
+    id: string
+  ): Promise<PaymentDetail | null | undefined> => {
+    const payment = payments.find((p) => p.id === id);
+    if (!payment || !database) return undefined;
 
     try {
       const participantSnap = await new Promise<any>((resolve, reject) => {
-        const participantRef = ref(database, `participants/${payment.participantId}`)
+        const participantRef = ref(
+          database,
+          `participants/${payment.participantId}`
+        );
         onValue(
           participantRef,
           (snapshot) => resolve(snapshot.val()),
           (error) => reject(error),
           { onlyOnce: true }
-        )
-      })
+        );
+      });
 
+      // Kembalikan null jika participant tidak ada atau bukan type "class"
+      if (!participantSnap || participantSnap.type !== "class") return null;
 
-      if (!participantSnap) return undefined
+      // Jangan kembalikan data jika status adalah "accepted"
+      // if (participantSnap.status === "accepted") return null;
 
       const classSnap = await new Promise<any>((resolve, reject) => {
-        const classRef = ref(database, `classes/${participantSnap.classId}`)
+        const classRef = ref(database, `classes/${participantSnap.classId}`);
         onValue(
           classRef,
           (snapshot) => resolve(snapshot.val()),
           (error) => reject(error),
           { onlyOnce: true }
-        )
-      })
+        );
+      });
 
       return {
         participant: {
@@ -159,18 +219,19 @@ export function PaymentsProvider({ children }: { children: React.ReactNode }) {
           id: participantSnap.classId,
           ...classSnap,
         },
-      }
+      };
     } catch (error) {
-      console.error("Gagal mengambil data peserta:", error)
-      toast.error("Gagal mengambil data peserta")
-      return undefined
+      console.error("Gagal mengambil data peserta:", error);
+      toast.error("Gagal mengambil data peserta");
+      return undefined;
     }
-  }
+  };
 
   return (
     <PaymentsContext.Provider
       value={{
         payments,
+        paymentsAccepted,
         loading,
         addPayment,
         updatePayment,
@@ -181,13 +242,13 @@ export function PaymentsProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
     </PaymentsContext.Provider>
-  )
+  );
 }
 
 export function usePayments() {
-  const context = useContext(PaymentsContext)
+  const context = useContext(PaymentsContext);
   if (!context) {
-    throw new Error("usePayments harus digunakan di dalam PaymentsProvider")
+    throw new Error("usePayments harus digunakan di dalam PaymentsProvider");
   }
-  return context
+  return context;
 }
