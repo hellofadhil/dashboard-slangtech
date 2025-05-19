@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -21,43 +21,81 @@ import { MoreHorizontal, Edit, Trash2, Plus, Search, Link2 } from "lucide-react"
 import { usePayments } from "@/components/payment-provider"
 import Link from "next/link"
 import { PaymentFile, PaymentDetail, PaymentFileFormData } from "@/lib/types"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationLink,
+  PaginationNext,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
+
+const ITEMS_PER_PAGE = 8
 
 export function PaymentsPageAccepted() {
-  const { paymentsAccepted, loading, addPayment, updatePayment, deletePayment, getPaymentDetailById } = usePayments()
+  const { paymentsAccepted, loading, addPayment, updatePayment, deletePayment, getPaymentVerifiedDetailById } = usePayments()
   const [searchQuery, setSearchQuery] = useState("")
   const [showDialog, setShowDialog] = useState(false)
   const [editingPayment, setEditingPayment] = useState<PaymentFile | null>(null)
   const [participants, setParticipants] = useState<Record<string, PaymentDetail>>({})
+  const [currentPage, setCurrentPage] = useState(1)
+  const [cachedParticipants, setCachedParticipants] = useState<Record<string, PaymentDetail>>({})
 
-//   console.log(paymentsAccepted)
-  const filteredPayments = paymentsAccepted.filter((payment) =>
-    payment.participantId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    payment.filePath.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Memoized filtered payments
+  const filteredPayments = useMemo(() => {
+    return paymentsAccepted.filter((payment) =>
+      payment.participantId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      payment.filePath.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [paymentsAccepted, searchQuery])
 
-//   console.log("Filtered payments:", filteredPayments)
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPayments.length / ITEMS_PER_PAGE)
+  const paginatedPayments = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredPayments.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+  }, [filteredPayments, currentPage])
+
+  // Optimized participant data fetching
+  const fetchParticipants = useCallback(async () => {
+    const newParticipants: Record<string, PaymentDetail> = {}
+    const paymentsToFetch = paginatedPayments.filter(payment => !cachedParticipants[payment.id])
+
+    if (paymentsToFetch.length === 0) return
+
+    try {
+      const participantPromises = paymentsToFetch.map(async (payment) => {
+        const data = await getPaymentVerifiedDetailById(payment.id)
+        if (data) {
+          newParticipants[payment.id] = data
+        }
+      })
+
+      await Promise.all(participantPromises)
+      
+      setCachedParticipants(prev => ({ ...prev, ...newParticipants }))
+    } catch (error) {
+      console.error("Error fetching participant details:", error)
+    }
+  }, [paginatedPayments, cachedParticipants, getPaymentVerifiedDetailById])
 
   useEffect(() => {
-    const fetchParticipants = async () => {
-      const participantsData: Record<string, PaymentDetail> = {}
-
-
-
-      for (const payment of paymentsAccepted) {
-        const data = await getPaymentDetailById(payment.id)
-        console.log(data)
-        if (data !== null && data !== undefined) {
-          participantsData[payment.id] = data
-        }
-      }
-
-      setParticipants(participantsData)
-    }
-
-    if (paymentsAccepted.length > 0) {
+    if (paginatedPayments.length > 0) {
       fetchParticipants()
     }
-  }, [paymentsAccepted, getPaymentDetailById])
+  }, [paginatedPayments, fetchParticipants])
+
+  // Update displayed participants when cached data or pagination changes
+  useEffect(() => {
+    const displayedParticipants: Record<string, PaymentDetail> = {}
+    paginatedPayments.forEach(payment => {
+      if (cachedParticipants[payment.id]) {
+        displayedParticipants[payment.id] = cachedParticipants[payment.id]
+      }
+    })
+    setParticipants(displayedParticipants)
+  }, [paginatedPayments, cachedParticipants])
 
   const handleEdit = (payment: PaymentFile) => {
     setEditingPayment(payment)
@@ -67,10 +105,73 @@ export function PaymentsPageAccepted() {
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this payment?")) {
       await deletePayment(id)
+      // Clear cache for deleted payment
+      setCachedParticipants(prev => {
+        const newCache = { ...prev }
+        delete newCache[id]
+        return newCache
+      })
     }
   }
 
-  if (loading) {
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page)
+    }
+  }
+
+  const renderPaginationItems = () => {
+    const items = []
+    const maxVisiblePages = 5
+    let startPage = 1
+    let endPage = totalPages
+
+    if (totalPages > maxVisiblePages) {
+      const half = Math.floor(maxVisiblePages / 2)
+      startPage = Math.max(currentPage - half, 1)
+      endPage = Math.min(currentPage + half, totalPages)
+
+      if (currentPage <= half + 1) {
+        endPage = maxVisiblePages
+      } else if (currentPage >= totalPages - half) {
+        startPage = totalPages - maxVisiblePages + 1
+      }
+    }
+
+    if (startPage > 1) {
+      items.push(
+        <PaginationItem key="first" onClick={() => handlePageChange(1)}>
+          <PaginationLink>1</PaginationLink>
+        </PaginationItem>
+      )
+      if (startPage > 2) {
+        items.push(<PaginationEllipsis key="ellipsis-start" />)
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      items.push(
+        <PaginationItem key={i} onClick={() => handlePageChange(i)}>
+          <PaginationLink isActive={i === currentPage}>{i}</PaginationLink>
+        </PaginationItem>
+      )
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        items.push(<PaginationEllipsis key="ellipsis-end" />)
+      }
+      items.push(
+        <PaginationItem key="last" onClick={() => handlePageChange(totalPages)}>
+          <PaginationLink>{totalPages}</PaginationLink>
+        </PaginationItem>
+      )
+    }
+
+    return items
+  }
+
+  if (loading && paymentsAccepted.length === 0) {
     return <div className="flex justify-center items-center h-full">Loading...</div>
   }
 
@@ -91,7 +192,10 @@ export function PaymentsPageAccepted() {
         <Input
           placeholder="Search payments..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value)
+            setCurrentPage(1) // Reset to first page when searching
+          }}
         />
       </div>
 
@@ -111,19 +215,19 @@ export function PaymentsPageAccepted() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPayments.length === 0 ? (
+              {paginatedPayments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-6">
+                  <TableCell colSpan={8} className="text-center py-6">
                     No payments found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPayments.map((payment) => (
+                paginatedPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell>{participants[payment.id]?.participant.name || 'N/A'}</TableCell>
-                    <TableCell>{participants[payment.id]?.class.name || 'N/A'} {participants[payment.id]?.class.type || 'N/A'}</TableCell>
-                    <TableCell>{participants[payment.id]?.participant.email || 'N/A'}</TableCell>
-                    <TableCell>{participants[payment.id]?.participant.phoneNumber || 'N/A'}</TableCell>
+                    <TableCell>{participants[payment.id]?.participant.name || 'Loading...'}</TableCell>
+                    <TableCell>{participants[payment.id]?.class.name || 'Loading...'} {participants[payment.id]?.class.type || ''}</TableCell>
+                    <TableCell>{participants[payment.id]?.participant.email || 'Loading...'}</TableCell>
+                    <TableCell>{participants[payment.id]?.participant.phoneNumber || 'Loading...'}</TableCell>
                     <TableCell>
                       <Badge variant={payment.verified ? "default" : "secondary"}>
                         {payment.verified ? "Verified" : "Not Verified"}
@@ -143,7 +247,7 @@ export function PaymentsPageAccepted() {
                           year: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
-                        }) : 'N/A'}
+                        }) : 'Loading...'}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -174,6 +278,26 @@ export function PaymentsPageAccepted() {
           </Table>
         </CardContent>
       </Card>
+
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              />
+            </PaginationItem>
+            {renderPaginationItems()}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
 
       <PaymentDialog
         open={showDialog}

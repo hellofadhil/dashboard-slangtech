@@ -22,6 +22,10 @@ interface PaymentsContextType {
   getPaymentDetailById: (
     id: string
   ) => Promise<PaymentDetail | undefined | null>;
+  getPaymentVerifiedDetailById: (
+    id: string
+  ) => Promise<PaymentDetail | undefined | null>;
+
 }
 
 const PaymentsContext = createContext<PaymentsContextType | undefined>(
@@ -71,7 +75,7 @@ export function PaymentsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     if (!database) {
       toast.error("Firebase database tidak terinisialisasi");
       setLoading(false);
@@ -90,7 +94,7 @@ export function PaymentsProvider({ children }: { children: React.ReactNode }) {
               id,
               ...(payment as Omit<PaymentFile, "id">),
             }))
-            .filter((payment) => payment.verificationStatus === "verified");  
+            .filter((payment) => payment.verificationStatus === "verified");
           setPaymentsAccepted(paymentsArray);
         } else {
           setPaymentsAccepted([]);
@@ -174,6 +178,60 @@ export function PaymentsProvider({ children }: { children: React.ReactNode }) {
     return payments.find((p) => p.id === id);
   };
 
+  const getPaymentVerifiedDetailById = async (
+    id: string
+  ): Promise<PaymentDetail | null | undefined> => {
+    const payment = paymentsAccepted.find((p) => p.id === id);
+    if (!payment || !database) return undefined;
+
+    try {
+      const participantSnap = await new Promise<any>((resolve, reject) => {
+        const participantRef = ref(
+          database,
+          `participants/${payment.participantId}`
+        );
+        onValue(
+          participantRef,
+          (snapshot) => resolve(snapshot.val()),
+          (error) => reject(error),
+          { onlyOnce: true }
+        );
+      });
+
+      // Kembalikan null jika participant tidak ada atau bukan type "class"
+      if (!participantSnap || participantSnap.type !== "class") return null;
+
+      // Jangan kembalikan data jika status adalah "accepted"
+      // if (participantSnap.status === "accepted") return null;
+
+      const classSnap = await new Promise<any>((resolve, reject) => {
+        const classRef = ref(database, `classes/${participantSnap.classId}`);
+        onValue(
+          classRef,
+          (snapshot) => resolve(snapshot.val()),
+          (error) => reject(error),
+          { onlyOnce: true }
+        );
+      });
+
+      return {
+        participant: {
+          id: payment.participantId,
+          ...participantSnap,
+        },
+        class: {
+          id: participantSnap.classId,
+          ...classSnap,
+        },
+      };
+    } catch (error) {
+      console.error("Gagal mengambil data peserta:", error);
+      toast.error("Gagal mengambil data peserta");
+      return undefined;
+    }
+  };
+
+
   const getPaymentDetailById = async (
     id: string
   ): Promise<PaymentDetail | null | undefined> => {
@@ -238,6 +296,7 @@ export function PaymentsProvider({ children }: { children: React.ReactNode }) {
         deletePayment,
         getPaymentById,
         getPaymentDetailById,
+        getPaymentVerifiedDetailById
       }}
     >
       {children}

@@ -40,11 +40,6 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Logo } from "@/components/logo"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
-/**
- * Komponen Sidebar
- *
- * Menampilkan navigasi utama aplikasi dan kontrol pengguna
- */
 export function Sidebar() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
@@ -52,8 +47,8 @@ export function Sidebar() {
   const [isMobile, setIsMobile] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [trainingServicesOpen, setTrainingServicesOpen] = useState(true)
+  const [paymentOpen, setPaymentOpen] = useState(false)
 
-  // Periksa apakah kita berada di perangkat mobile
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
@@ -67,7 +62,6 @@ export function Sidebar() {
     }
   }, [])
 
-  // Periksa apakah rute layanan pelatihan aktif
   useEffect(() => {
     if (
       pathname === "/events" ||
@@ -78,9 +72,14 @@ export function Sidebar() {
     ) {
       setTrainingServicesOpen(true)
     }
+    if (
+      pathname === "/payment" ||
+      pathname === "/payment/verified"
+    ) {
+      setPaymentOpen(true)
+    }
   }, [pathname])
 
-  // Definisi rute utama
   const mainRoutes = [
     {
       label: "Dashboard",
@@ -94,15 +93,9 @@ export function Sidebar() {
       href: "/settings",
       active: pathname === "/settings",
     },
-    {
-      label: "Pembayaran",
-      icon: BanknoteIcon,
-      href: "/payment",
-      active: pathname === "/payment",
-    },
   ]
 
-  const PaymentRoutes = [
+  const paymentRoutes = [
     {
       label: "Pembayaran",
       icon: BanknoteIcon,
@@ -117,7 +110,6 @@ export function Sidebar() {
     },
   ]
 
-  // Definisi rute layanan pelatihan
   const trainingServicesRoutes = [
     {
       label: "Event",
@@ -149,26 +141,17 @@ export function Sidebar() {
       href: "/class",
       active: pathname === "/class",
     },
-
   ]
 
-  /**
-   * Menangani proses logout
-   */
   const handleLogout = async () => {
     try {
       await logout()
-      // Toast ditangani di auth provider
     } catch (error) {
       console.error("Failed to logout:", error)
       toast.error("Gagal logout. Silakan coba lagi.")
     }
   }
 
-  /**
-   * Komponen konten sidebar
-   * Digunakan baik di desktop maupun mobile
-   */
   const SidebarContent = () => (
     <>
       <div className="p-5 border-b flex items-center justify-between">
@@ -182,7 +165,6 @@ export function Sidebar() {
 
       <div className="flex-1 px-3 py-6">
         <nav className="space-y-1">
-          {/* Rute utama */}
           {mainRoutes.map((route) => (
             <Link
               key={route.href}
@@ -197,7 +179,43 @@ export function Sidebar() {
             </Link>
           ))}
 
-          {/* Bagian Layanan Pelatihan yang dapat dilipat */}
+          {/* Collapsible Pembayaran */}
+          <Collapsible open={paymentOpen} onOpenChange={setPaymentOpen} className="w-full">
+            <CollapsibleTrigger asChild>
+              <button
+                className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm transition-all hover:bg-accent ${
+                  paymentRoutes.some((route) => route.active)
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <BanknoteIcon className={`h-4 w-4 ${paymentRoutes.some((route) => route.active) ? "text-primary" : ""}`} />
+                  <span>Pembayaran</span>
+                </div>
+                {paymentOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 space-y-1 mt-1">
+              {paymentRoutes.map((route) => (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all hover:bg-accent ${
+                    route.active
+                      ? "bg-primary/5 text-primary font-medium"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => isMobile && setMobileMenuOpen(false)}
+                >
+                  <route.icon className={`h-4 w-4 ${route.active ? "text-primary" : ""}`} />
+                  {route.label}
+                </Link>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Layanan Pelatihan */}
           <Collapsible open={trainingServicesOpen} onOpenChange={setTrainingServicesOpen} className="w-full">
             <CollapsibleTrigger asChild>
               <button
@@ -208,9 +226,7 @@ export function Sidebar() {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <GraduationCap
-                    className={`h-4 w-4 ${trainingServicesRoutes.some((route) => route.active) ? "text-primary" : ""}`}
-                  />
+                  <GraduationCap className={`h-4 w-4 ${trainingServicesRoutes.some((route) => route.active) ? "text-primary" : ""}`} />
                   <span>Layanan Pelatihan</span>
                 </div>
                 {trainingServicesOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -238,7 +254,6 @@ export function Sidebar() {
       </div>
 
       <div className="p-4 border-t">
-        {/* Pengaturan tema */}
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm text-muted-foreground">Tema</span>
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
@@ -246,7 +261,6 @@ export function Sidebar() {
           </Button>
         </div>
 
-        {/* Notifikasi */}
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm text-muted-foreground">Notifikasi</span>
           <DropdownMenu>
@@ -268,7 +282,6 @@ export function Sidebar() {
           </DropdownMenu>
         </div>
 
-        {/* Profil pengguna */}
         <div className="flex items-center gap-3 mb-4 p-2 rounded-lg border bg-card/50">
           <Avatar>
             <AvatarImage src="/placeholder.svg" alt="User" />
@@ -290,52 +303,36 @@ export function Sidebar() {
               <DropdownMenuItem>Profil</DropdownMenuItem>
               <DropdownMenuItem>Pengaturan</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>Keluar</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
-        {/* Tombol logout */}
-        <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
       </div>
     </>
   )
 
-  // Untuk tampilan desktop
-  if (!isMobile) {
-    return (
-      <div className="hidden md:flex flex-col h-full w-64 bg-background border-r">
-        <SidebarContent />
-      </div>
-    )
-  }
-
-  // Untuk tampilan mobile
   return (
     <>
-      {/* Header mobile */}
-      <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between p-4 bg-background border-b md:hidden">
-        <Logo size="sm" />
+      {/* Sidebar for Desktop */}
+      <aside className="hidden md:flex h-full w-64 flex-col border-r bg-background">
+        {SidebarContent()}
+      </aside>
+
+      {/* Sidebar for Mobile */}
+      {isMobile && mobileMenuOpen && (
         <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="icon" className="md:hidden">
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="p-0 sm:max-w-[280px] h-screen block" side="left">
-            <div className="flex flex-col h-full bg-background">
-              <SidebarContent />
-            </div>
+          <DialogContent className="p-0 w-4/5 h-screen max-w-xs bg-background">
+            {SidebarContent()}
           </DialogContent>
         </Dialog>
-      </div>
-      {/* Spacer untuk header mobile */}
-      <div className="h-16 md:hidden"></div>
+      )}
+
+      {/* Button to open menu on Mobile */}
+      {isMobile && !mobileMenuOpen && (
+        <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50" onClick={() => setMobileMenuOpen(true)}>
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
     </>
   )
 }
-
